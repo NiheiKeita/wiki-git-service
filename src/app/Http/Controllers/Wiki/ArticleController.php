@@ -111,7 +111,14 @@ class ArticleController extends Controller
       'content_after' => $validated['content'],
     ]);
 
-    return redirect()->route('wiki.repositories.articles.show', [$repository, $article])
+    return redirect()->route(
+      isset($branch_id)
+        ? 'wiki.repositories.branches.articles'
+        : 'wiki.repositories.articles.show',
+      isset($branch_id)
+        ? [$repository, $branch_id]
+        : [$repository, $article]
+    )
       ->with('success', '記事が作成されました。');
   }
 
