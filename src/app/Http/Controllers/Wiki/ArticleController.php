@@ -117,14 +117,18 @@ class ArticleController extends Controller
 
   public function show(Repository $repository, Article $article)
   {
-    $user = auth()->user();
-
+    $user = auth()->user() ?? new \App\Models\User();
     if (!$repository->hasUserAccess($user)) {
       abort(403);
     }
 
+    // mainブランチ以外は404
+    $article->load('branch');
+    if (!$article->branch || !$article->branch->is_main) {
+      abort(404);
+    }
+
     $article->load([
-      'branch',
       'commits' => function ($query) {
         $query->with('user')->latest();
       },
@@ -175,7 +179,6 @@ class ArticleController extends Controller
     $validated = $request->validate([
       'title' => 'required|string|max:255',
       'content' => 'required|string',
-      'branch_id' => 'required|exists:branches,id',
       'tags' => 'nullable|array',
       'tags.*' => 'string|max:50',
       'commit_message' => 'required|string|max:255',
@@ -187,14 +190,13 @@ class ArticleController extends Controller
       'title' => $validated['title'],
       'content' => $validated['content'],
       'slug' => Str::slug($validated['title']),
-      'branch_id' => $validated['branch_id'],
       'tags' => $validated['tags'] ?? [],
     ]);
 
     // コミットを作成
     Commit::create([
       'repository_id' => $repository->id,
-      'branch_id' => $validated['branch_id'],
+      'branch_id' => $article->branch_id,
       'article_id' => $article->id,
       'user_id' => $user->id,
       'hash' => Commit::generateHash(),

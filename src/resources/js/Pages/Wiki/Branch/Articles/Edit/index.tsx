@@ -33,6 +33,7 @@ export default function BranchArticleEdit({ repository, branch, article }: Props
   const { data, setData, put, processing, errors } = useForm({
     title: article.title,
     content: article.content,
+    commit_message: '記事を更新',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,6 +84,21 @@ export default function BranchArticleEdit({ repository, branch, article }: Props
             />
             {errors.content && (
               <p className="mt-1 text-sm text-red-600">{errors.content}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="commit_message" className="block text-sm font-medium text-gray-700">
+              コミットメッセージ
+            </label>
+            <input
+              type="text"
+              id="commit_message"
+              value={data.commit_message}
+              onChange={(e) => setData('commit_message', e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+            {errors.commit_message && (
+              <p className="mt-1 text-sm text-red-600">{errors.commit_message}</p>
             )}
           </div>
           <div className="flex justify-end space-x-3">
