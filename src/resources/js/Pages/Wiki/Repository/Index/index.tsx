@@ -45,7 +45,7 @@ export default function RepositoryIndex({ ownedRepositories, sharedRepositories 
                     <h2 className="mb-4 text-lg font-medium text-gray-900">所有リポジトリ</h2>
                     <div className="overflow-hidden bg-white shadow sm:rounded-md">
                         <ul className="divide-y divide-gray-200">
-                            {ownedRepositories.map((repository) => (
+                            {ownedRepositories?.map((repository) => (
                                 <li key={repository.id}>
                                     <Link
                                         href={route('wiki.repositories.show', repository.id)}
@@ -100,7 +100,7 @@ export default function RepositoryIndex({ ownedRepositories, sharedRepositories 
                         <h2 className="mb-4 text-lg font-medium text-gray-900">共有リポジトリ</h2>
                         <div className="overflow-hidden bg-white shadow sm:rounded-md">
                             <ul className="divide-y divide-gray-200">
-                                {sharedRepositories.map((repository) => (
+                                {sharedRepositories?.map((repository) => (
                                     <li key={repository.id}>
                                         <Link
                                             href={route('wiki.repositories.show', repository.id)}

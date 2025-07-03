@@ -9,12 +9,13 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Web\LoginController;
 use App\Http\Controllers\Web\PasswordController;
 use App\Http\Middleware\VerifyCsrfToken;
-use App\Http\Controllers\ProfileController;
+
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\TopController;
 use App\Http\Controllers\Wiki\RepositoryController;
 use App\Http\Controllers\Wiki\ArticleController;
 use App\Http\Controllers\Wiki\PullRequestController;
+use App\Http\Controllers\Wiki\BranchController;
 use Inertia\Inertia;
 
 /*
@@ -68,16 +69,15 @@ Route::get('/', [TopController::class, 'index'])->name('top');
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+
 
 // Wikiシステムのルート
 Route::middleware(['auth', 'verified'])->prefix('wiki')->name('wiki.')->group(function () {
     // リポジトリ管理
     Route::resource('repositories', RepositoryController::class);
+
+    // ブランチ管理
+    Route::resource('repositories.branches', BranchController::class);
 
     // 記事管理
     Route::resource('repositories.articles', ArticleController::class);

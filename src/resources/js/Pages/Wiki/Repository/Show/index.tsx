@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from '@inertiajs/react'
 import WikiLayout from '@/Layouts/WikiLayout'
+import GitHistoryGraph from '@/Components/GitHistoryGraph'
 
 interface Article {
     id: number;
@@ -33,12 +34,33 @@ interface Repository {
     recent_articles: Article[];
 }
 
-interface Props {
-    repository: Repository;
+interface Commit {
+    id: string;
+    message: string;
+    author: string;
+    date: string;
+    branch: string;
+    parents: string[];
+    is_merge: boolean;
+    is_head: boolean;
 }
 
-export default function RepositoryShow({ repository }: Props) {
-    const defaultBranch = repository.branches.find(branch => branch.is_default)
+interface GitBranch {
+    name: string;
+    color: string;
+    commits: string[];
+}
+
+interface Props {
+    repository: Repository;
+    commits?: Commit[];
+    branches?: GitBranch[];
+}
+
+export default function RepositoryShow({ repository, commits = [], branches = [] }: Props) {
+    const defaultBranch = repository.branches?.find(branch => branch.is_default)
+
+
 
     return (
         <WikiLayout>
@@ -74,7 +96,16 @@ export default function RepositoryShow({ repository }: Props) {
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                     {/* メインコンテンツ */}
-                    <div className="lg:col-span-2">
+                    <div className="space-y-8 lg:col-span-2">
+                        {/* Git履歴グラフ */}
+                        {commits.length > 0 && branches.length > 0 && (
+                            <GitHistoryGraph
+                                commits={commits}
+                                branches={branches}
+                            />
+                        )}
+
+                        {/* 最近の記事 */}
                         <div className="rounded-lg bg-white shadow">
                             <div className="border-b border-gray-200 px-6 py-4">
                                 <h2 className="text-lg font-medium text-gray-900">最近の記事</h2>
@@ -150,6 +181,12 @@ export default function RepositoryShow({ repository }: Props) {
                                     className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                 >
                                     リポジトリを編集
+                                </Link>
+                                <Link
+                                    href={route('wiki.repositories.branches.index', repository.id)}
+                                    className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                >
+                                    ブランチ管理
                                 </Link>
                                 <Link
                                     href={route('wiki.repositories.pull-requests.index', repository.id)}

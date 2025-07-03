@@ -76,10 +76,96 @@ class RepositoryController extends Controller
             },
         ]);
 
+        // Git履歴データを生成
+        $commits = $this->generateGitHistory($repository);
+        $branches = $this->generateBranchData($repository);
+
         return Inertia::render('Wiki/Repository/Show', [
             'repository' => $repository,
             'userRole' => $repository->users()->where('user_id', $user->id)->first()?->pivot->role ?? 'owner',
+            'commits' => $commits,
+            'branches' => $branches,
         ]);
+    }
+
+    private function generateGitHistory(Repository $repository)
+    {
+        $commits = [];
+
+        // 記事の作成・更新履歴からコミットを生成
+        $articles = $repository->articles()->with(['branch'])->get();
+
+        foreach ($articles as $article) {
+            $commits[] = [
+                'id' => 'c' . $article->id,
+                'message' => $article->title . ' を作成',
+                'author' => 'システム',
+                'date' => $article->created_at->toISOString(),
+                'branch' => $article->branch->name,
+                'parents' => [],
+                'is_merge' => false,
+                'is_head' => false,
+            ];
+
+            if ($article->updated_at->gt($article->created_at)) {
+                $commits[] = [
+                    'id' => 'c' . $article->id . '_update',
+                    'message' => $article->title . ' を更新',
+                    'author' => 'システム',
+                    'date' => $article->updated_at->toISOString(),
+                    'branch' => $article->branch->name,
+                    'parents' => ['c' . $article->id],
+                    'is_merge' => false,
+                    'is_head' => false,
+                ];
+            }
+        }
+
+        // プルリクエストのマージ履歴を追加
+        $pullRequests = $repository->pullRequests()->where('status', 'merged')->with(['targetBranch'])->get();
+        foreach ($pullRequests as $pr) {
+            $commits[] = [
+                'id' => 'pr' . $pr->id,
+                'message' => 'PR #' . $pr->id . ' をマージ: ' . $pr->title,
+                'author' => 'システム',
+                'date' => $pr->updated_at->toISOString(),
+                'branch' => $pr->targetBranch->name,
+                'parents' => ['c' . $pr->id, 'c' . $pr->id . '_update'],
+                'is_merge' => true,
+                'is_head' => true,
+            ];
+        }
+
+        // 日付順にソート
+        usort($commits, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+
+        return $commits;
+    }
+
+    private function generateBranchData(Repository $repository)
+    {
+        $branches = [];
+        $colors = ['#2563eb', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+        foreach ($repository->branches as $index => $branch) {
+            $branchCommits = $repository->articles()
+                ->where('branch_id', $branch->id)
+                ->pluck('id')
+                ->map(function ($id) {
+                    return 'c' . $id;
+                })
+                ->toArray();
+
+            $branches[] = [
+                'name' => $branch->name,
+                'color' => $colors[$index % count($colors)],
+                'commits' => $branchCommits,
+            ];
+        }
+
+        return $branches;
     }
 
     public function edit(Repository $repository)
