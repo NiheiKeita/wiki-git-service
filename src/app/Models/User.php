@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -44,6 +46,44 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    // Wikiシステム用のリレーション
+    public function ownedRepositories(): HasMany
+    {
+        return $this->hasMany(Repository::class, 'owner_id');
+    }
+
+    public function repositories(): BelongsToMany
+    {
+        return $this->belongsToMany(Repository::class, 'repository_users')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function commits(): HasMany
+    {
+        return $this->hasMany(Commit::class);
+    }
+
+    public function pullRequests(): HasMany
+    {
+        return $this->hasMany(PullRequest::class, 'author_id');
+    }
+
+    public function mergedPullRequests(): HasMany
+    {
+        return $this->hasMany(PullRequest::class, 'merged_by');
+    }
+
+    public function pullRequestComments(): HasMany
+    {
+        return $this->hasMany(PullRequestComment::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
 
     protected static function boot()
     {
