@@ -16,14 +16,15 @@ interface Repository {
 
 interface Props {
   repository: Repository
+  branches: Branch[]
 }
 
-export default function PullRequestCreate({ repository }: Props) {
+export default function PullRequestCreate({ repository, branches }: Props) {
   const { data, setData, post, processing, errors } = useForm({
     title: '',
     description: '',
     source_branch_id: '',
-    target_branch_id: repository.branches?.find(b => b.is_default)?.id || repository.branches?.[0]?.id || '',
+    target_branch_id: branches?.find(b => b.is_default)?.id || branches?.[0]?.id || '',
     create_new_branch: false,
     new_branch_name: '',
   })
@@ -121,7 +122,7 @@ export default function PullRequestCreate({ repository }: Props) {
                     className="mt-3 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   >
                     <option value="">ブランチを選択</option>
-                    {repository.branches?.map((branch) => (
+                    {branches?.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name} {branch.is_default ? '(デフォルト)' : ''}
                       </option>
@@ -155,7 +156,7 @@ export default function PullRequestCreate({ repository }: Props) {
                   onChange={(e) => setData('target_branch_id', e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 >
-                  {repository.branches?.map((branch) => (
+                  {branches?.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name} {branch.is_default ? '(デフォルト)' : ''}
                     </option>
