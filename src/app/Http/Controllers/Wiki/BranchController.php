@@ -8,6 +8,7 @@ use App\Models\Branch;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
+use App\Models\Article;
 
 class BranchController extends Controller
 {
@@ -135,5 +136,65 @@ class BranchController extends Controller
 
     return redirect()->route('wiki.repositories.branches.index', $repository)
       ->with('success', 'ブランチが削除されました。');
+  }
+
+  public function articles(Repository $repository, Branch $branch)
+  {
+    $user = auth()->user();
+    if (!$repository->hasUserAccess($user)) {
+      abort(403);
+    }
+    if ($branch->repository_id !== $repository->id) {
+      abort(404);
+    }
+    $articles = $branch->articles()->with('branch')->latest()->get();
+    return Inertia::render('Wiki/Branch/Articles/Index', [
+      'repository' => $repository,
+      'branch' => $branch,
+      'articles' => $articles,
+    ]);
+  }
+
+  public function showArticle(Repository $repository, Branch $branch, Article $article)
+  {
+    $user = auth()->user();
+    if (!$repository->hasUserAccess($user)) abort(403);
+    if ($branch->repository_id !== $repository->id) abort(404);
+    if ($article->branch_id !== $branch->id) abort(404);
+
+    $article->load(['branch']);
+    // 必要なら他のリレーションも
+
+    return Inertia::render('Wiki/Branch/Articles/Show', [
+      'repository' => $repository,
+      'branch' => $branch,
+      'article' => $article,
+    ]);
+  }
+
+  public function editArticle(Repository $repository, Branch $branch, Article $article)
+  {
+    $user = auth()->user();
+    if (!$repository->hasUserAccess($user, 'editor')) abort(403);
+    if ($branch->repository_id !== $repository->id) abort(404);
+    if ($article->branch_id !== $branch->id) abort(404);
+
+    return Inertia::render('Wiki/Branch/Articles/Edit', [
+      'repository' => $repository,
+      'branch' => $branch,
+      'article' => $article,
+    ]);
+  }
+
+  public function createArticle(Repository $repository, Branch $branch)
+  {
+    $user = auth()->user();
+    if (!$repository->hasUserAccess($user, 'editor')) abort(403);
+    if ($branch->repository_id !== $repository->id) abort(404);
+
+    return Inertia::render('Wiki/Branch/Articles/Create', [
+      'repository' => $repository,
+      'branch' => $branch,
+    ]);
   }
 }

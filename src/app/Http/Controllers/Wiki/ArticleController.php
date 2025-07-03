@@ -57,18 +57,42 @@ class ArticleController extends Controller
       abort(403);
     }
 
-    $validated = $request->validate([
-      'title' => 'required|string|max:255',
-      'content' => 'required|string',
-      'branch_id' => 'required|exists:branches,id',
-      'tags' => 'nullable|array',
-      'tags.*' => 'string|max:50',
-      'commit_message' => 'required|string|max:255',
-    ]);
+    // create_new_branchを厳密にbool化
+    $isNewBranch = filter_var($request->input('create_new_branch'), FILTER_VALIDATE_BOOLEAN);
+
+    try {
+      $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'content' => 'required|string',
+        'branch_id' => $isNewBranch ? 'nullable' : 'required|exists:branches,id',
+        'new_branch_name' => $isNewBranch ? 'required|string|max:255' : 'nullable',
+        'tags' => 'nullable|array',
+        'tags.*' => 'string|max:50',
+        'commit_message' => 'nullable|string|max:255',
+      ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+      \Log::error('記事作成バリデーションエラー', [
+        'errors' => $e->errors(),
+        'input' => $request->all(),
+        'isNewBranch' => $isNewBranch,
+      ]);
+      throw $e;
+    }
+
+    if ($isNewBranch) {
+      $branch = Branch::create([
+        'repository_id' => $repository->id,
+        'name' => $validated['new_branch_name'],
+        'is_main' => false,
+      ]);
+      $branch_id = $branch->id;
+    } else {
+      $branch_id = $validated['branch_id'];
+    }
 
     $article = Article::create([
       'repository_id' => $repository->id,
-      'branch_id' => $validated['branch_id'],
+      'branch_id' => $branch_id,
       'title' => $validated['title'],
       'content' => $validated['content'],
       'slug' => Str::slug($validated['title']),
@@ -79,11 +103,11 @@ class ArticleController extends Controller
     // コミットを作成
     Commit::create([
       'repository_id' => $repository->id,
-      'branch_id' => $validated['branch_id'],
+      'branch_id' => $branch_id,
       'article_id' => $article->id,
       'user_id' => $user->id,
       'hash' => Commit::generateHash(),
-      'message' => $validated['commit_message'],
+      'message' => $validated['commit_message'] ?? '記事作成',
       'content_after' => $validated['content'],
     ]);
 

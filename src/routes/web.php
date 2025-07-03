@@ -90,6 +90,18 @@ Route::middleware(['auth', 'verified'])->prefix('wiki')->name('wiki.')->group(fu
         ->name('pull-requests.close');
     Route::post('repositories/{repository}/pull-requests/{pullRequest}/comments', [PullRequestController::class, 'addComment'])
         ->name('pull-requests.comments.store');
+
+    // ブランチの記事一覧
+    Route::get('repositories/{repository}/branches/{branch}/articles', [\App\Http\Controllers\Wiki\BranchController::class, 'articles'])->name('repositories.branches.articles');
+
+    // ブランチの記事詳細
+    Route::get('repositories/{repository}/branches/{branch}/articles/{article}', [\App\Http\Controllers\Wiki\BranchController::class, 'showArticle'])->name('repositories.branches.articles.show');
+
+    // ブランチの記事編集
+    Route::get('repositories/{repository}/branches/{branch}/articles/{article}/edit', [\App\Http\Controllers\Wiki\BranchController::class, 'editArticle'])->name('repositories.branches.articles.edit');
+
+    // ブランチの記事作成
+    Route::get('repositories/{repository}/branches/{branch}/articles/create', [\App\Http\Controllers\Wiki\BranchController::class, 'createArticle'])->name('repositories.branches.articles.create');
 });
 
 // 公開Wikiページ

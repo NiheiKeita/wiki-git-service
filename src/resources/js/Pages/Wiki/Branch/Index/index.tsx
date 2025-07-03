@@ -91,6 +91,12 @@ export default function BranchIndex({ repository }: Props) {
                         >
                           編集
                         </Link>
+                        <Link
+                          href={route('wiki.repositories.branches.articles', [repository.id, branch.id])}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-900"
+                        >
+                          記事一覧
+                        </Link>
                         {!branch.is_main && branch.articles_count === 0 && (
                           <button
                             onClick={() => {
