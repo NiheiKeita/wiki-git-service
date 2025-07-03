@@ -76,6 +76,14 @@ class RepositoryController extends Controller
             },
         ]);
 
+        // 公開済みかつmainブランチの記事のみ取得
+        $recent_articles = $repository->articles()
+            ->published()
+            ->inMainBranch()
+            ->with('branch')
+            ->latest()
+            ->get();
+
         // Git履歴データを生成
         $commits = $this->generateGitHistory($repository);
         $branches = $this->generateBranchData($repository);
@@ -85,6 +93,7 @@ class RepositoryController extends Controller
             'userRole' => $repository->users()->where('user_id', $user->id)->first()?->pivot->role ?? 'owner',
             'commits' => $commits,
             'branches' => $branches,
+            'recent_articles' => $recent_articles,
         ]);
     }
 

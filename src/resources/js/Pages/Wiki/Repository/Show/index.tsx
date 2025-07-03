@@ -55,9 +55,10 @@ interface Props {
     repository: Repository;
     commits?: Commit[];
     branches?: GitBranch[];
+    recent_articles: Article[];
 }
 
-export default function RepositoryShow({ repository, commits = [], branches = [] }: Props) {
+export default function RepositoryShow({ repository, commits = [], branches = [], recent_articles }: Props) {
     const defaultBranch = repository.branches?.find(branch => branch.is_default)
 
 
@@ -111,7 +112,7 @@ export default function RepositoryShow({ repository, commits = [], branches = []
                                 <h2 className="text-lg font-medium text-gray-900">最近の記事</h2>
                             </div>
                             <div className="divide-y divide-gray-200">
-                                {repository.recent_articles?.map((article) => (
+                                {recent_articles?.map((article) => (
                                     <div key={article.id} className="px-6 py-4">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -131,7 +132,7 @@ export default function RepositoryShow({ repository, commits = [], branches = []
                                         </div>
                                     </div>
                                 ))}
-                                {repository.recent_articles?.length === 0 && (
+                                {recent_articles?.length === 0 && (
                                     <div className="px-6 py-8 text-center text-gray-500">
                                         記事がありません
                                     </div>
