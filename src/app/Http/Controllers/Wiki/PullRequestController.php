@@ -78,7 +78,7 @@ class PullRequestController extends Controller
       'status' => 'open',
     ]);
 
-    return redirect()->route('wiki.pull-requests.show', [$repository, $pullRequest])
+    return redirect()->route('wiki.repositories.pull-requests.show', [$repository, $pullRequest])
       ->with('success', 'プルリクエストが作成されました。');
   }
 
@@ -175,7 +175,7 @@ class PullRequestController extends Controller
       ]);
     });
 
-    return redirect()->route('wiki.pull-requests.show', [$repository, $pullRequest])
+    return redirect()->route('wiki.repositories.pull-requests.show', [$repository, $pullRequest])
       ->with('success', 'プルリクエストがマージされました。');
   }
 
@@ -193,7 +193,7 @@ class PullRequestController extends Controller
 
     $pullRequest->update(['status' => 'closed']);
 
-    return redirect()->route('wiki.pull-requests.show', [$repository, $pullRequest])
+    return redirect()->route('wiki.repositories.pull-requests.show', [$repository, $pullRequest])
       ->with('success', 'プルリクエストがクローズされました。');
   }
 

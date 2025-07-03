@@ -87,7 +87,7 @@ class ArticleController extends Controller
       'content_after' => $validated['content'],
     ]);
 
-    return redirect()->route('wiki.articles.show', [$repository, $article])
+    return redirect()->route('wiki.repositories.articles.show', [$repository, $article])
       ->with('success', '記事が作成されました。');
   }
 
@@ -179,7 +179,7 @@ class ArticleController extends Controller
       'content_after' => $validated['content'],
     ]);
 
-    return redirect()->route('wiki.articles.show', [$repository, $article])
+    return redirect()->route('wiki.repositories.articles.show', [$repository, $article])
       ->with('success', '記事が更新されました。');
   }
 
@@ -193,7 +193,7 @@ class ArticleController extends Controller
 
     $article->delete();
 
-    return redirect()->route('wiki.articles.index', $repository)
+    return redirect()->route('wiki.repositories.articles.index', $repository)
       ->with('success', '記事が削除されました。');
   }
 }
