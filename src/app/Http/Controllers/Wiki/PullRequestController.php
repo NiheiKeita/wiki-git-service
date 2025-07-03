@@ -92,32 +92,44 @@ class PullRequestController extends Controller
             'author',
             'sourceBranch',
             'targetBranch',
-            'article',
             'comments' => function ($query) {
                 $query->with('user')->orderBy('created_at');
             },
         ]);
 
-        // 差分を計算
-        $sourceArticle = Article::where('id', $pullRequest->article_id)
-            ->where('branch_id', $pullRequest->source_branch_id)
-            ->first();
+        // ブランチ間の記事差分を取得
+        $sourceArticles = Article::where('branch_id', $pullRequest->source_branch_id)
+            ->where('repository_id', $repository->id)
+            ->get();
 
-        $targetArticle = Article::where('id', $pullRequest->article_id)
-            ->where('branch_id', $pullRequest->target_branch_id)
-            ->first();
+        $targetArticles = Article::where('branch_id', $pullRequest->target_branch_id)
+            ->where('repository_id', $repository->id)
+            ->get();
 
-        $diff = $this->calculateDiff(
-            $targetArticle?->content ?? '',
-            $sourceArticle?->content ?? ''
-        );
+        // 差分を計算（全記事の差分を結合）
+        $diff = [];
+        foreach ($sourceArticles as $sourceArticle) {
+            $targetArticle = $targetArticles->where('slug', $sourceArticle->slug)->first();
+            $articleDiff = $this->calculateDiff(
+                $targetArticle?->content ?? '',
+                $sourceArticle->content
+            );
+
+            // 記事タイトルを追加
+            $diff[] = [
+                'type' => 'header',
+                'content' => $sourceArticle->title,
+                'article_slug' => $sourceArticle->slug,
+            ];
+            $diff = array_merge($diff, $articleDiff);
+        }
 
         return Inertia::render('Wiki/PullRequest/Show', [
             'repository' => $repository,
             'pullRequest' => $pullRequest,
             'diff' => $diff,
-            'sourceArticle' => $sourceArticle,
-            'targetArticle' => $targetArticle,
+            'sourceArticles' => $sourceArticles,
+            'targetArticles' => $targetArticles,
         ]);
     }
 
