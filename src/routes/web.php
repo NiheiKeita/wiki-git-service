@@ -89,7 +89,7 @@ Route::middleware(['auth', 'verified'])->prefix('wiki')->name('wiki.')->group(fu
     Route::post('repositories/{repository}/pull-requests/{pullRequest}/close', [PullRequestController::class, 'close'])
         ->name('pull-requests.close');
     Route::post('repositories/{repository}/pull-requests/{pullRequest}/comments', [PullRequestController::class, 'addComment'])
-        ->name('pull-requests.comments.store');
+        ->name('repositories.pull-requests.comments.store');
 
     // ブランチの記事一覧
     Route::get('repositories/{repository}/branches/{branch}/articles', [\App\Http\Controllers\Wiki\BranchController::class, 'articles'])->name('repositories.branches.articles');

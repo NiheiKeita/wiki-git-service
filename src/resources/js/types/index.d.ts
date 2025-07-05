@@ -5,6 +5,33 @@ export interface User {
     email_verified_at: string;
 }
 
+export interface PullRequestComment {
+    id: number;
+    content: string;
+    line_number: number | null;
+    line_content: string | null;
+    user: User;
+    created_at: string;
+}
+
+export interface PullRequest {
+    id: number;
+    title: string;
+    description: string | null;
+    status: string;
+    author: User;
+    source_branch: {
+        id: number;
+        name: string;
+    };
+    target_branch: {
+        id: number;
+        name: string;
+    };
+    comments: PullRequestComment[];
+    created_at: string;
+}
+
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     auth: {
         user: User;

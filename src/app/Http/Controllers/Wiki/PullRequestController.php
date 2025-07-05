@@ -97,6 +97,21 @@ class PullRequestController extends Controller
             },
         ]);
 
+        // デバッグ用ログ
+        \Log::info('PullRequest loaded with comments', [
+            'pull_request_id' => $pullRequest->id,
+            'comments_count' => $pullRequest->comments->count(),
+            'comments' => $pullRequest->comments->map(function ($comment) {
+                return [
+                    'id' => $comment->id,
+                    'content' => $comment->content,
+                    'user_name' => $comment->user->name ?? 'Unknown',
+                    'line_number' => $comment->line_number,
+                    'created_at' => $comment->created_at,
+                ];
+            })->toArray(),
+        ]);
+
         // ブランチ間の記事差分を取得
         $sourceArticles = Article::where('branch_id', $pullRequest->source_branch_id)
             ->where('repository_id', $repository->id)
@@ -209,27 +224,55 @@ class PullRequestController extends Controller
 
     public function addComment(Request $request, Repository $repository, PullRequest $pullRequest)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        if (!$repository->hasUserAccess($user)) {
-            abort(403);
+            if (!$repository->hasUserAccess($user)) {
+                abort(403);
+            }
+
+            $validated = $request->validate([
+                'content' => 'required|string',
+                'line_number' => 'nullable|integer',
+                'line_content' => 'nullable|string',
+            ]);
+
+            // デバッグ用ログ（バリデーション後）
+            \Log::info('Validation passed', [
+                'validated_data' => $validated,
+                'pull_request_id' => $pullRequest->id,
+                'user_id' => $user->id,
+            ]);
+
+            $comment = PullRequestComment::create([
+                'pull_request_id' => $pullRequest->id,
+                'user_id' => $user->id,
+                'content' => $validated['content'],
+                'line_number' => $validated['line_number'] ?? null,
+                'line_content' => $validated['line_content'] ?? null,
+            ]);
+
+            // デバッグ用ログ
+            \Log::info('Comment created', [
+                'comment_id' => $comment->id,
+                'pull_request_id' => $pullRequest->id,
+                'user_id' => $user->id,
+                'content' => $validated['content'],
+                'line_number' => $validated['line_number'] ?? null,
+            ]);
+
+            return redirect()->route('wiki.repositories.pull-requests.show', [$repository, $pullRequest])
+                ->with('success', 'コメントが追加されました。');
+        } catch (\Exception $e) {
+            // エラーログ
+            \Log::error('Comment creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+            ]);
+
+            return back()->with('error', 'コメントの投稿に失敗しました: ' . $e->getMessage());
         }
-
-        $validated = $request->validate([
-            'content' => 'required|string',
-            'line_number' => 'nullable|integer',
-            'line_content' => 'nullable|string',
-        ]);
-
-        PullRequestComment::create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $user->id,
-            'content' => $validated['content'],
-            'line_number' => $validated['line_number'] ?? null,
-            'line_content' => $validated['line_content'] ?? null,
-        ]);
-
-        return back()->with('success', 'コメントが追加されました。');
     }
 
     private function calculateDiff(string $oldContent, string $newContent): array
