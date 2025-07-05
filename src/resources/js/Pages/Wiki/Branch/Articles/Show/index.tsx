@@ -25,9 +25,10 @@ interface Props {
   repository: Repository;
   branch: Branch;
   article: Article;
+  htmlContent: string;
 }
 
-export default function BranchArticleShow({ repository, branch, article }: Props) {
+export default function BranchArticleShow({ repository, branch, article, htmlContent }: Props) {
   return (
     <WikiLayout>
       <div className="px-4 sm:px-6 lg:px-8">
@@ -52,7 +53,7 @@ export default function BranchArticleShow({ repository, branch, article }: Props
           </div>
         </div>
         <div className="bg-white p-6 shadow sm:rounded-lg">
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
+          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: htmlContent }} />
           <div className="mt-6 text-sm text-gray-500">
             作成日: {new Date(article.created_at).toLocaleDateString('ja-JP')}<br />
             更新日: {new Date(article.updated_at).toLocaleDateString('ja-JP')}

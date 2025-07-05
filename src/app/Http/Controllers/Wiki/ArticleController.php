@@ -212,8 +212,19 @@ class ArticleController extends Controller
       'content_after' => $validated['content'],
     ]);
 
-    return redirect()->route('wiki.repositories.articles.show', [$repository, $article])
-      ->with('success', '記事が更新されました。');
+    // 記事のブランチに応じてリダイレクト先を決定
+    $article->load('branch');
+    if ($article->branch && $article->branch->is_main) {
+      return redirect()->route('wiki.repositories.articles.show', [$repository, $article])
+        ->with('success', '記事が更新されました。');
+    } else {
+      return redirect()->route('wiki.repositories.branches.articles.show', [
+        $repository,
+        $article->branch_id,
+        $article
+      ])
+        ->with('success', '記事が更新されました。');
+    }
   }
 
   public function destroy(Repository $repository, Article $article)

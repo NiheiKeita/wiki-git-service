@@ -163,12 +163,19 @@ class BranchController extends Controller
         if ($article->branch_id !== $branch->id) abort(404);
 
         $article->load(['branch']);
-        // 必要なら他のリレーションも
+
+        // MarkdownをHTMLに変換
+        $converter = new \League\CommonMark\GithubFlavoredMarkdownConverter([
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+        $htmlContent = $converter->convert($article->content);
 
         return Inertia::render('Wiki/Branch/Articles/Show', [
             'repository' => $repository,
             'branch' => $branch,
             'article' => $article,
+            'htmlContent' => $htmlContent->getContent(),
         ]);
     }
 
