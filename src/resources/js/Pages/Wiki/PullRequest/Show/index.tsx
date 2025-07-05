@@ -64,6 +64,16 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
     line_content: '',
   })
 
+  // useFormをトップレベルで定義
+  const { post: postComment, processing: commentProcessing } = useForm({
+    content: '',
+    line_number: null as number | null,
+    line_content: '',
+  })
+
+  const { post: postMerge, processing: mergeProcessing } = useForm({})
+  const { post: postClose, processing: closeProcessing } = useForm({})
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
@@ -92,16 +102,27 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const { post } = useForm({
-      content: commentForm.content,
-      line_number: commentForm.line_number,
-      line_content: commentForm.line_content,
-    })
-
-    post(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
+    postComment(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
+      data: {
+        content: commentForm.content,
+        line_number: commentForm.line_number,
+        line_content: commentForm.line_content,
+      },
       onSuccess: () => {
         setCommentForm({ content: '', line_number: null, line_content: '' })
         setSelectedLine(null)
+      },
+    })
+  }
+
+  const handleGeneralCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    postComment(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
+      data: {
+        content: commentForm.content,
+      },
+      onSuccess: () => {
+        setCommentForm({ content: '', line_number: null, line_content: '' })
       },
     })
   }
@@ -113,6 +134,18 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
       line_number: lineNumber,
       line_content: content,
     })
+  }
+
+  const handleMerge = () => {
+    if (confirm('このプルリクエストをマージしますか？')) {
+      postMerge(route('wiki.repositories.pull-requests.merge', [repository.id, pullRequest.id]))
+    }
+  }
+
+  const handleClose = () => {
+    if (confirm('このプルリクエストをクローズしますか？')) {
+      postClose(route('wiki.repositories.pull-requests.close', [repository.id, pullRequest.id]))
+    }
   }
 
   const getDiffLineClass = (type: string) => {
@@ -194,15 +227,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
         {/* 一般コメント投稿フォーム */}
         {pullRequest.status === 'open' && (
           <div className="border-t border-gray-200 px-6 py-4">
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              const { post } = useForm({ content: commentForm.content })
-              post(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
-                onSuccess: () => {
-                  setCommentForm({ content: '', line_number: null, line_content: '' })
-                },
-              })
-            }}>
+            <form onSubmit={handleGeneralCommentSubmit}>
               <div>
                 <label htmlFor="content" className="sr-only">
                   コメント
@@ -219,10 +244,10 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
               <div className="mt-3 flex justify-end">
                 <button
                   type="submit"
-                  disabled={!commentForm.content.trim()}
+                  disabled={commentProcessing || !commentForm.content.trim()}
                   className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
                 >
-                  コメントを投稿
+                  {commentProcessing ? '投稿中...' : 'コメントを投稿'}
                 </button>
               </div>
             </form>
@@ -313,10 +338,10 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                       </button>
                       <button
                         type="submit"
-                        disabled={!commentForm.content.trim()}
+                        disabled={commentProcessing || !commentForm.content.trim()}
                         className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
                       >
-                        コメントを投稿
+                        {commentProcessing ? '投稿中...' : 'コメントを投稿'}
                       </button>
                     </div>
                   </form>
@@ -349,26 +374,18 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
               {pullRequest.status === 'open' && (
                 <>
                   <button
-                    onClick={() => {
-                      if (confirm('このプルリクエストをマージしますか？')) {
-                        const { post } = useForm({})
-                        post(route('wiki.repositories.pull-requests.merge', [repository.id, pullRequest.id]))
-                      }
-                    }}
-                    className="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    onClick={handleMerge}
+                    disabled={mergeProcessing}
+                    className="inline-flex items-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
                   >
-                    マージ
+                    {mergeProcessing ? 'マージ中...' : 'マージ'}
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('このプルリクエストをクローズしますか？')) {
-                        const { post } = useForm({})
-                        post(route('wiki.repositories.pull-requests.close', [repository.id, pullRequest.id]))
-                      }
-                    }}
-                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    onClick={handleClose}
+                    disabled={closeProcessing}
+                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
                   >
-                    クローズ
+                    {closeProcessing ? 'クローズ中...' : 'クローズ'}
                   </button>
                 </>
               )}
