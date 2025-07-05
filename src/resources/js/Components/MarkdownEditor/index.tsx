@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import remarkGfm from 'remark-gfm'
 
 interface MarkdownEditorProps {
   value: string;
@@ -143,9 +144,10 @@ export default function MarkdownEditor({
 
         {(activeTab === 'preview' || activeTab === 'split') && (
           <div className={`${activeTab === 'split' ? 'w-1/2 border-l border-gray-300' : 'w-full'}`}>
-            <div className="prose prose-sm h-96 max-w-none overflow-y-auto p-4">
+            <div className="prose prose-sm h-96 max-w-none overflow-y-auto p-4 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-gray-700 prose-strong:font-bold prose-em:italic prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-pre:bg-gray-900 prose-pre:text-gray-100">
               {value ? (
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     code({ node, inline, className, children, ...props }: CodeProps) {
                       const match = /language-(\w+)/.exec(className || '')

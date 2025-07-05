@@ -54,16 +54,18 @@
     "glob": "8.1.0"
   },
   "dependencies": {
-    "react-slick": "^0.30.2",
-    "slick-carousel": "^1.8.1",
-    "ziggy-js": "^2.3.1",
-    "react-markdown": "^9.0.1",
-    "react-diff-viewer": "^3.1.1",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/react-syntax-highlighter": "^15.5.11",
     "diff-match-patch": "^1.0.5",
-    "marked": "^12.0.0",
     "highlight.js": "^11.9.0",
+    "marked": "^12.0.0",
+    "react-diff-viewer": "^3.1.1",
+    "react-markdown": "^9.0.1",
+    "react-slick": "^0.30.2",
     "react-syntax-highlighter": "^15.5.0",
-    "@types/react-syntax-highlighter": "^15.5.11"
+    "remark-gfm": "^4.0.1",
+    "slick-carousel": "^1.8.1",
+    "ziggy-js": "^2.3.1"
   },
   "msw": {
     "workerDirectory": [
