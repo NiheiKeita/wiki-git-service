@@ -82,6 +82,7 @@ export default function MarkdownEditor({
             {toolbarItems.map((item, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={item.action}
                 className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                 title={item.label}
@@ -92,28 +93,31 @@ export default function MarkdownEditor({
           </div>
           <div className="flex items-center space-x-1">
             <button
+              type="button"
               onClick={() => setActiveTab('edit')}
               className={`rounded px-3 py-1 text-xs ${activeTab === 'edit'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                 }`}
             >
               編集
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('preview')}
               className={`rounded px-3 py-1 text-xs ${activeTab === 'preview'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                 }`}
             >
               プレビュー
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('split')}
               className={`rounded px-3 py-1 text-xs ${activeTab === 'split'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                 }`}
             >
               分割表示
