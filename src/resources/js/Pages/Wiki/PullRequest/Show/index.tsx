@@ -27,10 +27,13 @@ type TabType = 'conversation' | 'files'
 export default function PullRequestShow({ repository, pullRequest, diff, sourceArticles, targetArticles }: Props) {
     const [activeTab, setActiveTab] = useState<TabType>('conversation')
     const [selectedLine, setSelectedLine] = useState<number | null>(null)
+    const [replyingTo, setReplyingTo] = useState<number | null>(null)
+    const [replyingToInFiles, setReplyingToInFiles] = useState<number | null>(null)
     const [commentForm, setCommentForm] = useState({
         content: '',
         line_number: null as number | null,
         line_content: '',
+        parent_id: null as number | null,
     })
 
     // useFormをトップレベルで定義
@@ -38,6 +41,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
         content: '',
         line_number: null as number | null,
         line_content: '',
+        parent_id: null as number | null,
     })
 
     const { post: postMerge, processing: mergeProcessing } = useForm({})
@@ -77,7 +81,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             line_content: commentForm.line_content,
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '' })
+                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
                 setSelectedLine(null)
             },
         })
@@ -91,7 +95,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             line_content: '',
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '' })
+                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
             },
         })
     }
@@ -102,6 +106,57 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             content: '',
             line_number: lineNumber,
             line_content: content,
+            parent_id: null,
+        })
+    }
+
+    const handleReply = (commentId: number) => {
+        setReplyingTo(commentId)
+        setCommentForm({
+            content: '',
+            line_number: null,
+            line_content: '',
+            parent_id: commentId,
+        })
+    }
+
+    const handleReplyInFiles = (commentId: number) => {
+        setReplyingToInFiles(commentId)
+        setCommentForm({
+            content: '',
+            line_number: null,
+            line_content: '',
+            parent_id: commentId,
+        })
+    }
+
+    const handleReplySubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        router.post(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
+            content: commentForm.content,
+            line_number: null,
+            line_content: '',
+            parent_id: commentForm.parent_id,
+        }, {
+            onSuccess: () => {
+                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setReplyingTo(null)
+            },
+        })
+    }
+
+    const handleReplySubmitInFiles = (e: React.FormEvent) => {
+        e.preventDefault()
+        router.post(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
+            content: commentForm.content,
+            line_number: null,
+            line_content: '',
+            parent_id: commentForm.parent_id,
+        }, {
+            onSuccess: () => {
+                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setReplyingToInFiles(null)
+            },
         })
     }
 
@@ -141,11 +196,177 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
         }
     }
 
+    const renderComment = (comment: PullRequestComment, isReply = false) => (
+        <div key={comment.id} className={`${isReply ? 'ml-8 border-l-2 border-gray-200 pl-4' : ''}`}>
+            <div className="flex space-x-3">
+                <div className="flex-shrink-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300">
+                        <span className="text-sm font-medium text-gray-600">
+                            {comment.user.name.charAt(0).toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-900">{comment.user.name}</span>
+                        <span className="text-sm text-gray-500">
+                            {new Date(comment.created_at).toLocaleDateString('ja-JP')}
+                        </span>
+                        {/* 行コメントの場合はバッジ表示 */}
+                        {comment.line_number && (
+                            <span className="ml-2 inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                行コメント（{comment.line_number}行目）
+                            </span>
+                        )}
+                    </div>
+                    {/* 行コメントの場合は該当行内容も表示 */}
+                    {comment.line_number && comment.line_content && (
+                        <div className="mt-1 rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-500">
+                            {comment.line_content}
+                        </div>
+                    )}
+                    <div className="mt-1 text-sm text-gray-700">
+                        {comment.content}
+                    </div>
+                    {/* 返信ボタン */}
+                    {pullRequest.status === 'open' && !isReply && (
+                        <div className="mt-2">
+                            <button
+                                onClick={() => handleReply(comment.id)}
+                                className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                返信
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 返信フォーム */}
+            {replyingTo === comment.id && (
+                <div className="ml-11 mt-3">
+                    <form onSubmit={handleReplySubmit}>
+                        <textarea
+                            value={commentForm.content}
+                            onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            rows={3}
+                            placeholder="返信を入力してください"
+                        />
+                        <div className="mt-2 flex justify-end space-x-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setReplyingTo(null)
+                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                                }}
+                                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={commentProcessing || !commentForm.content.trim()}
+                                className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {commentProcessing ? '投稿中...' : '返信を投稿'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* 返信コメント */}
+            {comment.replies && comment.replies.length > 0 && (
+                <div className="mt-3">
+                    {comment.replies.map((reply) => renderComment(reply, true))}
+                </div>
+            )}
+        </div>
+    )
+
+    const renderCommentInFiles = (comment: PullRequestComment, isReply = false) => (
+        <div key={comment.id} className={`${isReply ? 'ml-4 border-l-2 border-gray-200 pl-3' : ''}`}>
+            <div className="flex space-x-3">
+                <div className="flex-shrink-0">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-300">
+                        <span className="text-xs font-medium text-gray-600">
+                            {comment.user.name.charAt(0).toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-900">{comment.user.name}</span>
+                        <span className="text-sm text-gray-500">
+                            {new Date(comment.created_at).toLocaleDateString('ja-JP')}
+                        </span>
+                    </div>
+                    <div className="mt-1 text-sm text-gray-700">
+                        {comment.content}
+                    </div>
+                    {/* 返信ボタン */}
+                    {pullRequest.status === 'open' && !isReply && (
+                        <div className="mt-2">
+                            <button
+                                onClick={() => handleReplyInFiles(comment.id)}
+                                className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                返信
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 返信フォーム */}
+            {replyingToInFiles === comment.id && (
+                <div className="ml-9 mt-3">
+                    <form onSubmit={handleReplySubmitInFiles}>
+                        <textarea
+                            value={commentForm.content}
+                            onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            rows={2}
+                            placeholder="返信を入力してください"
+                        />
+                        <div className="mt-2 flex justify-end space-x-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setReplyingToInFiles(null)
+                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                                }}
+                                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={commentProcessing || !commentForm.content.trim()}
+                                className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {commentProcessing ? '投稿中...' : '返信'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* 返信コメント */}
+            {comment.replies && comment.replies.length > 0 && (
+                <div className="mt-2">
+                    {comment.replies.map((reply) => renderCommentInFiles(reply, true))}
+                </div>
+            )}
+        </div>
+    )
+
     const renderConversationTab = () => {
-        // コメントをcreated_atで昇順ソート
-        const sortedComments = [...pullRequest.comments].sort(
-            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        )
+        // トップレベルのコメントをcreated_atで昇順ソート
+        const sortedComments = [...pullRequest.comments]
+            .filter(comment => !comment.parent_id)
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         return (
             <div className="space-y-6">
                 {/* 説明 */}
@@ -173,42 +394,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                         {sortedComments.length === 0 && (
                             <div className="px-6 py-4 text-gray-500">コメントはありません</div>
                         )}
-                        {sortedComments.map((comment) => (
-                            <div key={comment.id} className="px-6 py-4">
-                                <div className="flex space-x-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300">
-                                            <span className="text-sm font-medium text-gray-600">
-                                                {comment.user.name.charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-sm font-medium text-gray-900">{comment.user.name}</span>
-                                            <span className="text-sm text-gray-500">
-                                                {new Date(comment.created_at).toLocaleDateString('ja-JP')}
-                                            </span>
-                                            {/* 行コメントの場合はバッジ表示 */}
-                                            {comment.line_number && (
-                                                <span className="ml-2 inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                                    行コメント（{comment.line_number}行目）
-                                                </span>
-                                            )}
-                                        </div>
-                                        {/* 行コメントの場合は該当行内容も表示 */}
-                                        {comment.line_number && comment.line_content && (
-                                            <div className="mt-1 rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-500">
-                                                {comment.line_content}
-                                            </div>
-                                        )}
-                                        <div className="mt-1 text-sm text-gray-700">
-                                            {comment.content}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                        {sortedComments.map((comment) => renderComment(comment))}
                     </div>
 
                     {/* 一般コメント投稿フォーム */}
@@ -289,16 +475,10 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
 
                             {/* インラインコメント */}
                             {pullRequest.comments
-                                .filter(comment => comment.line_number === line.line_number)
+                                .filter(comment => comment.line_number === line.line_number && !comment.parent_id)
                                 .map(comment => (
                                     <div key={comment.id} className="ml-20 border-l-4 border-blue-400 bg-blue-50 p-3">
-                                        <div className="mb-2 flex items-center space-x-2">
-                                            <span className="text-sm font-medium text-gray-900">{comment.user.name}</span>
-                                            <span className="text-sm text-gray-500">
-                                                {new Date(comment.created_at).toLocaleDateString('ja-JP')}
-                                            </span>
-                                        </div>
-                                        <div className="text-sm text-gray-700">{comment.content}</div>
+                                        {renderCommentInFiles(comment)}
                                     </div>
                                 ))}
 
@@ -318,7 +498,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedLine(null)
-                                                    setCommentForm({ content: '', line_number: null, line_content: '' })
+                                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
                                                 }}
                                                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
                                             >

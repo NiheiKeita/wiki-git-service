@@ -93,7 +93,7 @@ class PullRequestController extends Controller
             'sourceBranch',
             'targetBranch',
             'comments' => function ($query) {
-                $query->with('user')->orderBy('created_at');
+                $query->with(['user', 'replies.user'])->orderBy('created_at');
             },
         ]);
 
@@ -235,6 +235,7 @@ class PullRequestController extends Controller
                 'content' => 'required|string',
                 'line_number' => 'nullable|integer',
                 'line_content' => 'nullable|string',
+                'parent_id' => 'nullable|exists:pull_request_comments,id',
             ]);
 
             // デバッグ用ログ（バリデーション後）
@@ -250,6 +251,7 @@ class PullRequestController extends Controller
                 'content' => $validated['content'],
                 'line_number' => $validated['line_number'] ?? null,
                 'line_content' => $validated['line_content'] ?? null,
+                'parent_id' => $validated['parent_id'] ?? null,
             ]);
 
             // デバッグ用ログ

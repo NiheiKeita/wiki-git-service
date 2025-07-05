@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PullRequestComment extends Model
 {
@@ -16,6 +17,7 @@ class PullRequestComment extends Model
     'content',
     'line_number',
     'line_content',
+    'parent_id',
   ];
 
   protected $casts = [
@@ -30,5 +32,20 @@ class PullRequestComment extends Model
   public function user(): BelongsTo
   {
     return $this->belongsTo(User::class);
+  }
+
+  public function parent(): BelongsTo
+  {
+    return $this->belongsTo(PullRequestComment::class, 'parent_id');
+  }
+
+  public function replies(): HasMany
+  {
+    return $this->hasMany(PullRequestComment::class, 'parent_id')->orderBy('created_at');
+  }
+
+  public function scopeTopLevel($query)
+  {
+    return $query->whereNull('parent_id');
   }
 }
