@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Wiki;
 use App\Http\Controllers\Controller;
 use App\Models\Repository;
 use App\Models\Branch;
+use App\Models\Commit;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
@@ -147,11 +148,24 @@ class BranchController extends Controller
         if ($branch->repository_id !== $repository->id) {
             abort(404);
         }
-        $articles = $branch->articles()->with('branch')->latest()->get();
+
+        // 現在のブランチの記事を取得
+        $branchArticles = $branch->articles()->with('branch')->latest()->get();
+
+        // mainブランチの記事を取得（現在のブランチがmainでない場合のみ）
+        $mainArticles = collect();
+        if (!$branch->is_main) {
+            $mainBranch = $repository->branches()->where('is_main', true)->first();
+            if ($mainBranch) {
+                $mainArticles = $mainBranch->articles()->with('branch')->latest()->get();
+            }
+        }
+
         return Inertia::render('Wiki/Branch/Articles/Index', [
             'repository' => $repository,
             'branch' => $branch,
-            'articles' => $articles,
+            'articles' => $branchArticles,
+            'mainArticles' => $mainArticles,
         ]);
     }
 
@@ -162,7 +176,12 @@ class BranchController extends Controller
         if ($branch->repository_id !== $repository->id) abort(404);
         if ($article->branch_id !== $branch->id) abort(404);
 
-        $article->load(['branch']);
+        $article->load([
+            'branch',
+            'commits' => function ($query) {
+                $query->with('user')->latest();
+            },
+        ]);
 
         // MarkdownをHTMLに変換
         $converter = new \League\CommonMark\GithubFlavoredMarkdownConverter([
@@ -203,5 +222,51 @@ class BranchController extends Controller
             'repository' => $repository,
             'branch' => $branch,
         ]);
+    }
+
+    public function storeArticle(Request $request, Repository $repository, Branch $branch)
+    {
+        $user = auth()->user();
+        if (!$repository->hasUserAccess($user, 'editor')) abort(403);
+        if ($branch->repository_id !== $repository->id) abort(404);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'commit_message' => 'required|string|max:255',
+        ]);
+
+        // slug生成（重複防止ロジック）
+        $slugBase = Str::slug($validated['title']);
+        $slug = $slugBase . '-' . $branch->name;
+        $originalSlug = $slug;
+        $counter = 1;
+        while (\App\Models\Article::where('slug', $slug)->where('branch_id', $branch->id)->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        $article = Article::create([
+            'repository_id' => $repository->id,
+            'branch_id' => $branch->id,
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            'slug' => $slug,
+            'is_published' => false,
+        ]);
+
+        // コミットを作成
+        Commit::create([
+            'repository_id' => $repository->id,
+            'branch_id' => $branch->id,
+            'article_id' => $article->id,
+            'user_id' => $user->id,
+            'hash' => Commit::generateHash(),
+            'message' => $validated['commit_message'],
+            'content_after' => $validated['content'],
+        ]);
+
+        return redirect()->route('wiki.repositories.branches.articles', [$repository, $branch])
+            ->with('success', '記事が作成されました。');
     }
 }

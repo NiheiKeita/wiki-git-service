@@ -10,6 +10,7 @@ export interface PullRequestComment {
     content: string;
     line_number: number | null;
     line_content: string | null;
+    article_slug: string | null;
     parent_id: number | null;
     user: User;
     replies: PullRequestComment[];

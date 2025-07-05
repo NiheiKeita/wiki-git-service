@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified'])->prefix('wiki')->name('wiki.')->group(fu
 
     // ブランチの記事作成
     Route::get('repositories/{repository}/branches/{branch}/articles/create', [\App\Http\Controllers\Wiki\BranchController::class, 'createArticle'])->name('repositories.branches.articles.create');
+    Route::post('repositories/{repository}/branches/{branch}/articles', [\App\Http\Controllers\Wiki\BranchController::class, 'storeArticle'])->name('repositories.branches.articles.store');
     // ブランチの記事詳細
     Route::get('repositories/{repository}/branches/{branch}/articles/{article}', [\App\Http\Controllers\Wiki\BranchController::class, 'showArticle'])->name('repositories.branches.articles.show');
 

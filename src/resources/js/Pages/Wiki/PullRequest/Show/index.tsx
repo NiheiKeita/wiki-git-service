@@ -26,13 +26,14 @@ type TabType = 'conversation' | 'files'
 
 export default function PullRequestShow({ repository, pullRequest, diff, sourceArticles, targetArticles }: Props) {
     const [activeTab, setActiveTab] = useState<TabType>('conversation')
-    const [selectedLine, setSelectedLine] = useState<number | null>(null)
+    const [selectedLine, setSelectedLine] = useState<{ lineNumber: number, articleSlug: string } | null>(null)
     const [replyingTo, setReplyingTo] = useState<number | null>(null)
     const [replyingToInFiles, setReplyingToInFiles] = useState<number | null>(null)
     const [commentForm, setCommentForm] = useState({
         content: '',
         line_number: null as number | null,
         line_content: '',
+        article_slug: null as string | null,
         parent_id: null as number | null,
     })
 
@@ -41,6 +42,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
         content: '',
         line_number: null as number | null,
         line_content: '',
+        article_slug: null as string | null,
         parent_id: null as number | null,
     })
 
@@ -75,13 +77,15 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+        // commentFormに設定されたarticle_slugを使用
         router.post(route('wiki.repositories.pull-requests.comments.store', [repository.id, pullRequest.id]), {
             content: commentForm.content,
             line_number: commentForm.line_number,
             line_content: commentForm.line_content,
+            article_slug: commentForm.article_slug,
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                 setSelectedLine(null)
             },
         })
@@ -95,37 +99,44 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             line_content: '',
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
             },
         })
     }
 
-    const handleLineComment = (lineNumber: number, content: string) => {
-        setSelectedLine(lineNumber)
+    const handleLineComment = (lineNumber: number, content: string, articleSlug: string) => {
+        setSelectedLine({ lineNumber, articleSlug })
         setCommentForm({
             content: '',
             line_number: lineNumber,
             line_content: content,
+            article_slug: articleSlug,
             parent_id: null,
         })
     }
 
     const handleReply = (commentId: number) => {
         setReplyingTo(commentId)
+        // 親コメントのarticle_slugを取得
+        const parentComment = pullRequest.comments.find(comment => comment.id === commentId)
         setCommentForm({
             content: '',
             line_number: null,
             line_content: '',
+            article_slug: parentComment?.article_slug || null,
             parent_id: commentId,
         })
     }
 
     const handleReplyInFiles = (commentId: number) => {
         setReplyingToInFiles(commentId)
+        // 親コメントのarticle_slugを取得
+        const parentComment = pullRequest.comments.find(comment => comment.id === commentId)
         setCommentForm({
             content: '',
             line_number: null,
             line_content: '',
+            article_slug: parentComment?.article_slug || null,
             parent_id: commentId,
         })
     }
@@ -136,10 +147,11 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             content: commentForm.content,
             line_number: null,
             line_content: '',
+            article_slug: commentForm.article_slug,
             parent_id: commentForm.parent_id,
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                 setReplyingTo(null)
             },
         })
@@ -151,10 +163,11 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
             content: commentForm.content,
             line_number: null,
             line_content: '',
+            article_slug: commentForm.article_slug,
             parent_id: commentForm.parent_id,
         }, {
             onSuccess: () => {
-                setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                 setReplyingToInFiles(null)
             },
         })
@@ -258,7 +271,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                 type="button"
                                 onClick={() => {
                                     setReplyingTo(null)
-                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                                    setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                                 }}
                                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
                             >
@@ -335,7 +348,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                 type="button"
                                 onClick={() => {
                                     setReplyingToInFiles(null)
-                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                                    setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                                 }}
                                 className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
                             >
@@ -480,7 +493,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                         {/* 行コメントボタン */}
                                         {pullRequest.status === 'open' && line.type !== 'unchanged' && (
                                             <button
-                                                onClick={() => handleLineComment(line.line_number!, line.content)}
+                                                onClick={() => handleLineComment(line.line_number!, line.content, line.article_slug!)}
                                                 className="ml-2 text-blue-600 opacity-0 transition-opacity hover:text-blue-800 group-hover:opacity-100"
                                             >
                                                 💬
@@ -492,7 +505,11 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
 
                             {/* インラインコメント */}
                             {pullRequest.comments
-                                .filter(comment => comment.line_number === line.line_number && !comment.parent_id)
+                                .filter(comment =>
+                                    comment.line_number === line.line_number &&
+                                    comment.article_slug === line.article_slug &&
+                                    !comment.parent_id
+                                )
                                 .map(comment => (
                                     <div key={comment.id} className="ml-20 border-l-4 border-blue-400 bg-blue-50 p-3">
                                         {renderCommentInFiles(comment)}
@@ -500,7 +517,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                 ))}
 
                             {/* 行コメントフォーム */}
-                            {selectedLine === line.line_number && (
+                            {selectedLine && selectedLine.lineNumber === line.line_number && selectedLine.articleSlug === line.article_slug && (
                                 <div className="ml-20 border-l-4 border-yellow-400 bg-yellow-50 p-3">
                                     <form onSubmit={handleCommentSubmit}>
                                         <textarea
@@ -515,7 +532,7 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedLine(null)
-                                                    setCommentForm({ content: '', line_number: null, line_content: '', parent_id: null })
+                                                    setCommentForm({ content: '', line_number: null, line_content: '', article_slug: null, parent_id: null })
                                                 }}
                                                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
                                             >

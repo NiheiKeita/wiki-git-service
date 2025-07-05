@@ -17,6 +17,7 @@ class PullRequestComment extends Model
     'content',
     'line_number',
     'line_content',
+    'article_slug',
     'parent_id',
   ];
 

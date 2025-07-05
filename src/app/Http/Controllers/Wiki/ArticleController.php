@@ -90,12 +90,22 @@ class ArticleController extends Controller
       $branch_id = $validated['branch_id'];
     }
 
+    // slug生成（重複防止ロジック）
+    $slugBase = Str::slug($validated['title']);
+    $slug = $slugBase;
+    $originalSlug = $slug;
+    $counter = 1;
+    while (Article::where('slug', $slug)->exists()) {
+      $slug = $originalSlug . '-' . $counter;
+      $counter++;
+    }
+
     $article = Article::create([
       'repository_id' => $repository->id,
       'branch_id' => $branch_id,
       'title' => $validated['title'],
       'content' => $validated['content'],
-      'slug' => Str::slug($validated['title']),
+      'slug' => $slug,
       'tags' => $validated['tags'] ?? [],
       'is_published' => false,
     ]);
@@ -192,15 +202,34 @@ class ArticleController extends Controller
     ]);
 
     $contentBefore = $article->content;
+    $titleBefore = $article->title;
+
+    // タイトルが変更された場合のみslugを更新（重複防止ロジック付き）
+    $newSlug = $article->slug; // デフォルトは現在のslug
+    if ($titleBefore !== $validated['title']) {
+      $slugBase = Str::slug($validated['title']);
+      $newSlug = $slugBase;
+      $originalSlug = $newSlug;
+      $counter = 1;
+
+      // 全ブランチで同じslugが存在する場合は連番を付与
+      while (Article::where('slug', $newSlug)
+        ->where('id', '!=', $article->id)
+        ->exists()
+      ) {
+        $newSlug = $originalSlug . '-' . $counter;
+        $counter++;
+      }
+    }
 
     $article->update([
       'title' => $validated['title'],
       'content' => $validated['content'],
-      'slug' => Str::slug($validated['title']),
+      'slug' => $newSlug,
       'tags' => $validated['tags'] ?? [],
     ]);
 
-    // コミットを作成
+    // コミットを作成（編集履歴を保存）
     Commit::create([
       'repository_id' => $repository->id,
       'branch_id' => $article->branch_id,

@@ -127,7 +127,8 @@ class PullRequestController extends Controller
             $targetArticle = $targetArticles->where('slug', $sourceArticle->slug)->first();
             $articleDiff = $this->calculateDiff(
                 $targetArticle?->content ?? '',
-                $sourceArticle->content
+                $sourceArticle->content,
+                $sourceArticle->slug
             );
 
             // 記事タイトルを追加
@@ -235,6 +236,7 @@ class PullRequestController extends Controller
                 'content' => 'required|string',
                 'line_number' => 'nullable|integer',
                 'line_content' => 'nullable|string',
+                'article_slug' => 'nullable|string',
                 'parent_id' => 'nullable|exists:pull_request_comments,id',
             ]);
 
@@ -251,6 +253,7 @@ class PullRequestController extends Controller
                 'content' => $validated['content'],
                 'line_number' => $validated['line_number'] ?? null,
                 'line_content' => $validated['line_content'] ?? null,
+                'article_slug' => $validated['article_slug'] ?? null,
                 'parent_id' => $validated['parent_id'] ?? null,
             ]);
 
@@ -277,7 +280,7 @@ class PullRequestController extends Controller
         }
     }
 
-    private function calculateDiff(string $oldContent, string $newContent): array
+    private function calculateDiff(string $oldContent, string $newContent, string $articleSlug): array
     {
         $oldLines = explode("\n", $oldContent);
         $newLines = explode("\n", $newContent);
@@ -294,6 +297,7 @@ class PullRequestController extends Controller
                     'type' => 'unchanged',
                     'line_number' => $i + 1,
                     'content' => $oldLine,
+                    'article_slug' => $articleSlug,
                 ];
             } else {
                 if ($oldLine !== '') {
@@ -301,6 +305,7 @@ class PullRequestController extends Controller
                         'type' => 'removed',
                         'line_number' => $i + 1,
                         'content' => $oldLine,
+                        'article_slug' => $articleSlug,
                     ];
                 }
                 if ($newLine !== '') {
@@ -308,6 +313,7 @@ class PullRequestController extends Controller
                         'type' => 'added',
                         'line_number' => $i + 1,
                         'content' => $newLine,
+                        'article_slug' => $articleSlug,
                     ];
                 }
             }
