@@ -10,6 +10,14 @@ use App\Http\Controllers\Web\LoginController;
 use App\Http\Controllers\Web\PasswordController;
 use App\Http\Middleware\VerifyCsrfToken;
 
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\TopController;
+use App\Http\Controllers\Wiki\RepositoryController;
+use App\Http\Controllers\Wiki\ArticleController;
+use App\Http\Controllers\Wiki\PullRequestController;
+use App\Http\Controllers\Wiki\BranchController;
+use Inertia\Inertia;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -22,9 +30,9 @@ use App\Http\Middleware\VerifyCsrfToken;
 */
 
 Route::group(['middleware' => 'basicauth'], function () {
-    Route::fallback(function () {
-        return redirect(route('web.top'));
-    });
+    // Route::fallback(function () {
+    //     return redirect(route('web.top'));
+    // });
 
     Route::middleware('guest.web')->group(function () {
         Route::get('password/edit/{token}', [PasswordController::class, 'edit'])->name('web.password.edit');
@@ -55,3 +63,73 @@ Route::group(['middleware' => 'basicauth'], function () {
     Route::post('/api/upload', [ImageController::class, 'upload'])->withoutMiddleware(VerifyCsrfToken::class)->name('upload');
     Route::post('/api/upload/ma', [ImageController::class, 'maUpload'])->withoutMiddleware(VerifyCsrfToken::class)->name('upload.ma');
 });
+
+Route::get('/', [TopController::class, 'index'])->name('top');
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])->name('dashboard');
+
+
+
+// Wikiシステムのルート
+Route::middleware(['auth', 'verified'])->prefix('wiki')->name('wiki.')->group(function () {
+    // リポジトリ管理
+    Route::resource('repositories', RepositoryController::class);
+
+    // ブランチ管理
+    Route::resource('repositories.branches', BranchController::class);
+
+    // 記事管理
+    Route::resource('repositories.articles', ArticleController::class);
+
+    // プルリクエスト管理
+    Route::resource('repositories.pull-requests', PullRequestController::class);
+    Route::post('repositories/{repository}/pull-requests/{pullRequest}/merge', [PullRequestController::class, 'merge'])
+        ->name('pull-requests.merge');
+    Route::post('repositories/{repository}/pull-requests/{pullRequest}/close', [PullRequestController::class, 'close'])
+        ->name('pull-requests.close');
+    Route::post('repositories/{repository}/pull-requests/{pullRequest}/comments', [PullRequestController::class, 'addComment'])
+        ->name('repositories.pull-requests.comments.store');
+
+    // ブランチの記事一覧
+    Route::get('repositories/{repository}/branches/{branch}/articles', [\App\Http\Controllers\Wiki\BranchController::class, 'articles'])->name('repositories.branches.articles');
+
+    // ブランチの記事作成
+    Route::get('repositories/{repository}/branches/{branch}/articles/create', [\App\Http\Controllers\Wiki\BranchController::class, 'createArticle'])->name('repositories.branches.articles.create');
+    Route::post('repositories/{repository}/branches/{branch}/articles', [\App\Http\Controllers\Wiki\BranchController::class, 'storeArticle'])->name('repositories.branches.articles.store');
+    // ブランチの記事詳細
+    Route::get('repositories/{repository}/branches/{branch}/articles/{article}', [\App\Http\Controllers\Wiki\BranchController::class, 'showArticle'])->name('repositories.branches.articles.show');
+
+    // ブランチの記事編集
+    Route::get('repositories/{repository}/branches/{branch}/articles/{article}/edit', [\App\Http\Controllers\Wiki\BranchController::class, 'editArticle'])->name('repositories.branches.articles.edit');
+});
+
+// 公開Wikiページ
+Route::get('/wiki/{repository:slug}', function ($repository) {
+    $articles = $repository->articles()
+        ->published()
+        ->inMainBranch()
+        ->with('branch')
+        ->get();
+
+    return Inertia::render('Wiki/Public/Index', [
+        'repository' => $repository,
+        'articles' => $articles,
+    ]);
+})->name('wiki.public.index');
+
+Route::get('/wiki/{repository:slug}/{article:slug}', function ($repository, $article) {
+    $article = $repository->articles()
+        ->published()
+        ->inMainBranch()
+        ->where('slug', $article->slug)
+        ->with('branch')
+        ->firstOrFail();
+
+    return Inertia::render('Wiki/Public/Show', [
+        'repository' => $repository,
+        'article' => $article,
+    ]);
+})->name('wiki.public.show');
+
+require __DIR__ . '/auth.php';
