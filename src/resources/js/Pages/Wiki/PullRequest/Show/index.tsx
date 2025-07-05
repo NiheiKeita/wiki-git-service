@@ -434,10 +434,27 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
     const renderFilesChangedTab = () => (
         <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
-                <h2 className="text-lg font-medium text-gray-900">変更内容</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                    {pullRequest.source_branch.name} → {pullRequest.target_branch.name}
-                </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-medium text-gray-900">変更内容</h2>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {pullRequest.source_branch.name} → {pullRequest.target_branch.name}
+                        </p>
+                    </div>
+                    {/* 記事編集ボタン */}
+                    {sourceArticles.length > 0 && (
+                        <Link
+                            href={route('wiki.repositories.branches.articles.edit', [
+                                repository.id,
+                                pullRequest.source_branch.id,
+                                sourceArticles[0].id
+                            ])}
+                            className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            📝 記事を編集
+                        </Link>
+                    )}
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <div className="min-w-full">
@@ -611,6 +628,32 @@ export default function PullRequestShow({ repository, pullRequest, diff, sourceA
                                 </div>
                             </div>
                         </div>
+
+                        {/* 関連記事 */}
+                        {sourceArticles.length > 0 && (
+                            <div className="rounded-lg bg-white shadow">
+                                <div className="border-b border-gray-200 px-6 py-4">
+                                    <h3 className="text-lg font-medium text-gray-900">関連記事</h3>
+                                </div>
+                                <div className="space-y-2 p-6">
+                                    {sourceArticles.map((article) => (
+                                        <div key={article.id} className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-900">{article.title}</span>
+                                            <Link
+                                                href={route('wiki.repositories.branches.articles.edit', [
+                                                    repository.id,
+                                                    pullRequest.source_branch.id,
+                                                    article.id
+                                                ])}
+                                                className="text-sm text-blue-600 hover:text-blue-800"
+                                            >
+                                                編集
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* アクション */}
                         <div className="rounded-lg bg-white shadow">
